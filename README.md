@@ -5,11 +5,11 @@ First, run to install the nessary packages:
 npm i 
 ```
 
-This project is a base that is to be expanded upon and will utualize the migration function in the future. 
-Currently it relies on the following configurations laid out in the accountManagement.tsx. 
-This includes the local / postgreSQL running to allow for a simple database and form hooks. 
+This project serves as a foundation for future development of the migration function. 
+Currently, it is based on the configurations given in accountManagement.tsx. 
+This includes the local / postgreSQL server, which allows for a rudimentary database and form hooks. 
 
-If the database 'challenge' and the tables 'accounts' and 'transactions' are available on the users system the postgres Queries will run as expected. Once the setup is down run the following command below and the forms will be available for you.
+If the database 'challenge' and the tables 'accounts' and 'transactions' are available on the user's workstation, the postgres queries will work as intended. Once the setup is complete, use the following command to make the forms available to you.
 
 ```bash
 npm run dev
