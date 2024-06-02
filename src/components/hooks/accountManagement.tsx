@@ -3,28 +3,30 @@ import postgres from "postgres";
 
 
 /**
-* Replace with your PostgreSQL URL; this software expects the following to exist. 
-* Challenge is a PostgreSQL database with two tables: accounts and transactions.
-* Accounts is the following table - account_number: integer, name: text, amount: numeric, type: text, credit_limit: integer
-* Transactions is the following table - id: primary key integer, account_number: integer, cur_amount: numeric, pre_amount: numeric, type: text, tact_time: timestamp with time zone.
+ * Daniel23Stack - Foundational work for the connection and postgres logic.
+ * 
 */
-const sql = postgres('postgres://postgres:password@127.0.0.1:5342/challenge',{ 
-      host : 'localhost',
-      port : 5432,
-      database: 'challenge',
-      username: 'postgres',
-      password: 'password'
+const sql = postgres({ 
+      host : process.env.POSTGRES_HOST,
+      port : Number(process.env.POSTGRES_PORT),
+      database: process.env.POSTGRES_DB,
+      username: process.env.POSTGRES_USER,
+      password: process.env.POSTGRES_PASSWORD
     });
 
 
 export async function makeDeposit(act_num : number, amount: number){
       try{
-        const pullAccount = await sql`SELECT account_number, amount FROM challenge.accounts WHERE account_number = ${act_num}`;
+        if(act_num <= 0 || amount <= 0 ){
+          return {status: 'fail', data: {}};
+        }
+        const pullAccount = await sql`SELECT account_number, amount FROM accounts WHERE account_number = ${act_num}`;
+        
         let preAmount = Number(pullAccount[0]?.amount);
         let curAmount = Number(preAmount + amount);
         
         await sql`
-        UPDATE challenge.accounts set amount =${curAmount} WHERE account_number=${act_num} 
+        UPDATE accounts set amount =${curAmount} WHERE account_number=${act_num} 
         `;
         
         const transaction = {
@@ -33,7 +35,7 @@ export async function makeDeposit(act_num : number, amount: number){
           pre_amount: preAmount,
           type: 'deposit'
         }
-       await sql`INSERT INTO challenge.transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
+       await sql`INSERT INTO transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
 
         
        return {status: 'success'};
@@ -46,7 +48,7 @@ export async function makeDeposit(act_num : number, amount: number){
 export async function findAct (name: string, type: string){
     try{
    const find = await sql`SELECT account_number, name, amount, type, credit_limit 
-   FROM challenge.accounts 
+   FROM accounts
    WHERE name like ${name} AND type = ${type}`;     
       if(find.length >0){
         return {status: 'success', data: await find};
@@ -59,7 +61,10 @@ export async function findAct (name: string, type: string){
 }
 
 export async function makeWithdrawal(act_num: number, amount: number, type: string){
-  if(amount > 200 || amount < 0){
+  if(act_num <= 0){
+    return {status: 'unaccepted', message: 'Invalid Account.'};
+  }
+  if(amount > 200 || amount <= 0){
     return {status: 'unaccepted', message: 'Invalid Withdrawal Amount.'};
   }
   if(Number(amount) % 5 !== 0){
@@ -68,9 +73,9 @@ export async function makeWithdrawal(act_num: number, amount: number, type: stri
   try{
 
     const transactions = await sql`SELECT account_number, cur_amount, pre_amount, type, tact_time
-	FROM challenge.transactions WHERE account_number =${act_num} AND type='withdrawal' AND DATE(tact_time) = CURRENT_DATE ORDER BY tact_time ASC;`;
+	FROM transactions WHERE account_number =${act_num} AND type='withdrawal' AND DATE(tact_time) = CURRENT_DATE ORDER BY tact_time ASC;`;
     const acct = await sql`SELECT account_number, name, amount, type, credit_limit 
-    FROM challenge.accounts WHERE account_number=${act_num}`;
+    FROM accounts WHERE account_number=${act_num}`;
       if(acct.length > 0){
         if(acct[0]?.type ==='credit'){
            let a = Number(acct[0]?.amount);
@@ -96,9 +101,9 @@ export async function makeWithdrawal(act_num: number, amount: number, type: stri
                 type: 'withdrawal'
               }
               await sql`
-                  UPDATE challenge.accounts set amount =${wamount} WHERE account_number=${act_num} 
+                  UPDATE accounts set amount =${wamount} WHERE account_number=${act_num} 
                 `;
-              await sql`INSERT INTO challenge.transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
+              await sql`INSERT INTO transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
               return {status:'success', message: 'Accepted Withdrawal'} 
             }
            }
@@ -121,9 +126,9 @@ export async function makeWithdrawal(act_num: number, amount: number, type: stri
             type: 'withdrawal'
           }
           await sql`
-              UPDATE challenge.accounts set amount =${wamount} WHERE account_number=${act_num} 
+              UPDATE accounts set amount =${wamount} WHERE account_number=${act_num} 
             `;
-          await sql`INSERT INTO challenge.transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
+          await sql`INSERT INTO transactions ${sql(transaction,'account_number','cur_amount', 'pre_amount','type')}`;
           return {status:'success', message: 'Accepted Withdrawal'} 
         }
       }else{
